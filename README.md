@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+## 페르소나
 
-## Project info
+- 여행 계획자 - 박지민 (26세)
 
-**URL**: https://lovable.dev/projects/1ed9885b-4880-4fde-b9e1-027be3810602
+- 직업: 마케팅 회사 대리
 
-## How can I edit this code?
+- 라이프스타일: 연차 활용한 여행 계획, SNS 활발 사용, 친구들과의 모임 주도
 
-There are several ways of editing your application.
+- 목표: 친구들과 함께 만족스러운 여행 계획 세우기, 모든 의견 수렴하여 갈등 없는 여행
 
-**Use Lovable**
+- 니즈: 여행지별 맛집/숙소/관광지 정보, 친구들 의견 취합, 투표를 통한 민주적 결정
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/1ed9885b-4880-4fde-b9e1-027be3810602) and start prompting.
+- 페인 포인트: 친구들 의견 조율의 어려움, 정보 수집 시간 부족, 결정 지연으로 인한 스트레스
 
-Changes made via Lovable will be committed automatically to this repo.
+## 사용자 시나리오 및 스토리
 
-**Use your preferred IDE**
+#### 친구들과의 제주도 여행 계획
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+상황: 박지민이 대학 동기 4명과 함께 제주도 3박 4일 여행을 계획하려고 하는데, 각자 선호하는 맛집과 관광지가 달라 의견 조율이 어려움
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+사용자 시나리오:
 
-Follow these steps:
+1. 여행 투표 앱에서 "제주도 여행" 계획 생성
+2. 친구들을 참여자로 초대하고 투표 마감일 설정
+3. 맛집, 숙소, 관광지, 액티비티 카테고리별로 제안 추가
+4. AI 추천 기능으로 제주도 인기 장소들 자동 추가
+5. 친구들이 각자 선호하는 항목에 투표
+6. 투표 결과를 바탕으로 최종 여행 일정 확정
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+사용자 스토리:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+"여행 계획자로서, 저는 친구들의 다양한 의견을 효율적으로 수렴하고 싶습니다. 그래서 모두가 만족하는 여행 계획을 세우고 갈등 없이 즐거운 여행을 할 수 있습니다."
 
-# Step 3: Install the necessary dependencies.
-npm i
+인수 조건:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
 ```
+Given: 사용자가 여행 계획을 생성하고 친구들을 초대했을 때
+When: 각 카테고리별로 제안을 추가하고 투표를 진행했을 때
+Then: 실시간으로 투표 현황을 확인할 수 있고, 마감일 후 최종 결과를 확인할 수 있다
 
-**Edit a file directly in GitHub**
+Given: 사용자가 특정 지역의 여행 계획을 생성했을 때
+When: AI 추천 버튼을 클릭했을 때
+Then: 해당 지역의 인기 맛집, 숙소, 관광지가 자동으로 제안 목록에 추가된다
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/1ed9885b-4880-4fde-b9e1-027be3810602) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Given: 여행 계획의 투표 마감일이 지났을 때
+When: 사용자가 결과를 확인했을 때
+Then: 각 카테고리별 1위 항목이 명확히 표시되고, 전체 투표 현황을 한눈에 볼 수 있다
+```
