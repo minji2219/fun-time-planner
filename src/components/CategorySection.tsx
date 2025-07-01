@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Vote, Heart, Users } from "lucide-react";
+import { Vote, Heart, Users, ExternalLink } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface CategorySectionProps {
@@ -18,6 +18,7 @@ interface CategorySectionProps {
     description: string;
     votes: number;
     voters: string[];
+    url?: string;
   }>;
   onVote: (itemId: number) => void;
   currentUser: string;
@@ -67,6 +68,16 @@ const CategorySection = ({ category, items, onVote, currentUser, isExpired }: Ca
                         <CardTitle className="text-lg">{item.name}</CardTitle>
                         {index === 0 && item.votes > 0 && (
                           <Badge className="bg-yellow-100 text-yellow-800">1위</Badge>
+                        )}
+                        {item.url && (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:text-blue-700"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
                         )}
                       </div>
                       <CardDescription>{item.description}</CardDescription>

@@ -16,8 +16,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface CreateTripDialogProps {
   open: boolean;
@@ -29,6 +30,19 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState<Date>();
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [newParticipant, setNewParticipant] = useState("");
+
+  const handleAddParticipant = () => {
+    if (newParticipant.trim() && !participants.includes(newParticipant.trim())) {
+      setParticipants([...participants, newParticipant.trim()]);
+      setNewParticipant("");
+    }
+  };
+
+  const handleRemoveParticipant = (participantToRemove: string) => {
+    setParticipants(participants.filter(p => p !== participantToRemove));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,17 +52,20 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
       title,
       description,
       deadline: format(deadline, "yyyy-MM-dd"),
+      participants: participants.length > 0 ? participants : ["나"],
     });
 
     // 폼 리셋
     setTitle("");
     setDescription("");
     setDeadline(undefined);
+    setParticipants([]);
+    setNewParticipant("");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>새 여행 계획 만들기</DialogTitle>
           <DialogDescription>
@@ -105,6 +122,52 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
                 />
               </PopoverContent>
             </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label>참여자</Label>
+            <div className="flex space-x-2">
+              <Input
+                placeholder="참여자 이름을 입력하세요"
+                value={newParticipant}
+                onChange={(e) => setNewParticipant(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddParticipant();
+                  }
+                }}
+              />
+              <Button 
+                type="button" 
+                onClick={handleAddParticipant}
+                disabled={!newParticipant.trim()}
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {participants.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {participants.map((participant) => (
+                  <Badge key={participant} variant="secondary" className="flex items-center space-x-1">
+                    <span>{participant}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveParticipant(participant)}
+                      className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            
+            <p className="text-xs text-gray-500">
+              참여자를 추가하지 않으면 기본적으로 '나'만 참여자로 설정됩니다.
+            </p>
           </div>
           
           <DialogFooter>

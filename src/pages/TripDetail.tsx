@@ -11,8 +11,18 @@ import { ko } from "date-fns/locale";
 import CategorySection from "@/components/CategorySection";
 import AddSuggestionDialog from "@/components/AddSuggestionDialog";
 
-// 임시 데이터
-const mockTripData = {
+// 임시 데이터 - 실제로는 localStorage나 백엔드에서 가져올 데이터
+const getStoredTrips = () => {
+  const stored = localStorage.getItem('tripPlans');
+  return stored ? JSON.parse(stored) : {};
+};
+
+const saveTrips = (trips: any) => {
+  localStorage.setItem('tripPlans', JSON.stringify(trips));
+};
+
+// 기본 데이터 (기존 예시용)
+const defaultMockData = {
   1: {
     id: 1,
     title: "제주도 여행",
@@ -53,7 +63,11 @@ const TripDetail = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("restaurant");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [tripData, setTripData] = useState(mockTripData[1]);
+
+  // 저장된 데이터와 기본 데이터 병합
+  const storedTrips = getStoredTrips();
+  const allTrips = { ...defaultMockData, ...storedTrips };
+  const [tripData, setTripData] = useState(allTrips[id] || allTrips[1]);
 
   const deadlineDate = new Date(tripData.deadline);
   const isExpired = deadlineDate < new Date();
@@ -63,7 +77,6 @@ const TripDetail = () => {
   };
 
   const handleVote = (categoryId: string, itemId: number) => {
-    // 투표 로직 (실제로는 백엔드 연동 필요)
     const currentUser = "김철수"; // 임시 사용자
     
     setTripData(prev => {
@@ -73,15 +86,18 @@ const TripDetail = () => {
       
       if (item) {
         if (item.voters.includes(currentUser)) {
-          // 투표 취소
           item.votes -= 1;
           item.voters = item.voters.filter(voter => voter !== currentUser);
         } else {
-          // 투표
           item.votes += 1;
           item.voters.push(currentUser);
         }
       }
+      
+      // 로컬 스토리지에 저장
+      const storedTrips = getStoredTrips();
+      storedTrips[newData.id] = newData;
+      saveTrips(storedTrips);
       
       return newData;
     });
@@ -97,7 +113,16 @@ const TripDetail = () => {
 
     setTripData(prev => {
       const newData = { ...prev };
+      if (!newData.categories[suggestionData.category]) {
+        newData.categories[suggestionData.category] = [];
+      }
       newData.categories[suggestionData.category].push(newSuggestion);
+      
+      // 로컬 스토리지에 저장
+      const storedTrips = getStoredTrips();
+      storedTrips[newData.id] = newData;
+      saveTrips(storedTrips);
+      
       return newData;
     });
     
@@ -153,8 +178,8 @@ const TripDetail = () => {
                 <Users className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-sm text-gray-600">참여자</p>
-                  <p className="font-semibold">{tripData.participantCount}명</p>
-                  <p className="text-xs text-gray-500">{tripData.participants.join(", ")}</p>
+                  <p className="font-semibold">{tripData.participantCount || tripData.participants.length}명</p>
+                  <p className="text-xs text-gray-500">{tripData.participants.slice(0, 3).join(", ")}{tripData.participants.length > 3 ? '...' : ''}</p>
                 </div>
               </div>
               

@@ -36,6 +36,7 @@ const AddSuggestionDialog = ({ open, onOpenChange, onAddSuggestion, categories }
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [url, setUrl] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,12 +46,14 @@ const AddSuggestionDialog = ({ open, onOpenChange, onAddSuggestion, categories }
       name,
       description,
       category,
+      url: url.trim() || null,
     });
 
     // 폼 리셋
     setName("");
     setDescription("");
     setCategory("");
+    setUrl("");
   };
 
   return (
@@ -102,6 +105,17 @@ const AddSuggestionDialog = ({ open, onOpenChange, onAddSuggestion, categories }
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="url">참고 링크 (선택)</Label>
+            <Input
+              id="url"
+              placeholder="https://example.com"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              type="url"
             />
           </div>
           
