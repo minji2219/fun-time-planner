@@ -1,15 +1,15 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import CategorySection from "@/components/CategorySection";
 import AddSuggestionDialog from "@/components/AddSuggestionDialog";
+import { getAIRecommendation } from "@/utils/aiRecommendations";
 
 // 임시 데이터 - 실제로는 localStorage나 백엔드에서 가져올 데이터
 const getStoredTrips = () => {
@@ -129,6 +129,35 @@ const TripDetail = () => {
     setIsAddDialogOpen(false);
   };
 
+  const handleAIRecommendation = (categoryId: string) => {
+    const recommendation = getAIRecommendation(tripData.location || "한국", categoryId);
+    
+    const newSuggestion = {
+      id: Date.now(),
+      name: recommendation.name,
+      description: recommendation.description,
+      category: categoryId,
+      url: recommendation.url || null,
+      votes: 0,
+      voters: []
+    };
+
+    setTripData(prev => {
+      const newData = { ...prev };
+      if (!newData.categories[categoryId]) {
+        newData.categories[categoryId] = [];
+      }
+      newData.categories[categoryId].push(newSuggestion);
+      
+      // 로컬 스토리지에 저장
+      const storedTrips = getStoredTrips();
+      storedTrips[newData.id] = newData;
+      saveTrips(storedTrips);
+      
+      return newData;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* 헤더 */}
@@ -143,6 +172,12 @@ const TripDetail = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">{tripData.title}</h1>
                 <p className="text-gray-600">{tripData.description}</p>
+                {tripData.location && (
+                  <p className="text-sm text-gray-500 flex items-center mt-1">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {tripData.location}
+                  </p>
+                )}
               </div>
             </div>
             <Button 
@@ -209,6 +244,23 @@ const TripDetail = () => {
 
           {categoryConfig.map((category) => (
             <TabsContent key={category.id} value={category.id} className="mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center space-x-2">
+                  <category.icon className="h-5 w-5" />
+                  <h3 className="text-lg font-semibold">{category.name}</h3>
+                </div>
+                <Button
+                  onClick={() => handleAIRecommendation(category.id)}
+                  variant="outline"
+                  size="sm"
+                  disabled={isExpired}
+                  className="bg-gradient-to-r from-yellow-100 to-orange-100 hover:from-yellow-200 hover:to-orange-200 border-yellow-300"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI 추천
+                </Button>
+              </div>
+              
               <CategorySection
                 category={category}
                 items={tripData.categories[category.id] || []}

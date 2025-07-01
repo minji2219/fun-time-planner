@@ -50,6 +50,7 @@ const Index = () => {
     const newTrip = {
       id: Date.now(),
       ...tripData,
+      location: tripData.location, // 지역 정보 추가
       categories: {
         restaurant: [],
         accommodation: [],
