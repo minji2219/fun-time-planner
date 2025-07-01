@@ -1,3 +1,5 @@
+[트립메이트](https://fun-time-planner.lovable.app/)
+
 ## 페르소나
 
 - 여행 계획자 - 박지민 (26세)
