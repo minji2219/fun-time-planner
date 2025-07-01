@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import CategorySection from "@/components/CategorySection";
 import AddSuggestionDialog from "@/components/AddSuggestionDialog";
+import UserNameDialog from "@/components/UserNameDialog";
 import { getAIRecommendation } from "@/utils/aiRecommendations";
 
 // 임시 데이터 - 실제로는 localStorage나 백엔드에서 가져올 데이터
@@ -63,6 +64,8 @@ const TripDetail = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("restaurant");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState("");
 
   // 저장된 데이터와 기본 데이터 병합
   const storedTrips = getStoredTrips();
@@ -72,13 +75,26 @@ const TripDetail = () => {
   const deadlineDate = new Date(tripData.deadline);
   const isExpired = deadlineDate < new Date();
 
+  // 사용자 이름 확인
+  useEffect(() => {
+    const storedUserName = localStorage.getItem('currentUserName');
+    if (!storedUserName) {
+      setIsNameDialogOpen(true);
+    } else {
+      setCurrentUser(storedUserName);
+    }
+  }, []);
+
+  const handleSetUserName = (name: string) => {
+    setCurrentUser(name);
+    localStorage.setItem('currentUserName', name);
+  };
+
   const handleBack = () => {
     navigate("/");
   };
 
   const handleVote = (categoryId: string, itemId: number) => {
-    const currentUser = "김철수"; // 임시 사용자
-    
     setTripData(prev => {
       const newData = { ...prev };
       const category = newData.categories[categoryId];
@@ -93,6 +109,20 @@ const TripDetail = () => {
           item.voters.push(currentUser);
         }
       }
+      
+      // 로컬 스토리지에 저장
+      const storedTrips = getStoredTrips();
+      storedTrips[newData.id] = newData;
+      saveTrips(storedTrips);
+      
+      return newData;
+    });
+  };
+
+  const handleDeleteSuggestion = (categoryId: string, itemId: number) => {
+    setTripData(prev => {
+      const newData = { ...prev };
+      newData.categories[categoryId] = newData.categories[categoryId].filter(item => item.id !== itemId);
       
       // 로컬 스토리지에 저장
       const storedTrips = getStoredTrips();
@@ -265,7 +295,8 @@ const TripDetail = () => {
                 category={category}
                 items={tripData.categories[category.id] || []}
                 onVote={(itemId) => handleVote(category.id, itemId)}
-                currentUser="김철수"
+                onDelete={(itemId) => handleDeleteSuggestion(category.id, itemId)}
+                currentUser={currentUser}
                 isExpired={isExpired}
               />
             </TabsContent>
@@ -278,6 +309,12 @@ const TripDetail = () => {
         onOpenChange={setIsAddDialogOpen}
         onAddSuggestion={handleAddSuggestion}
         categories={categoryConfig}
+      />
+
+      <UserNameDialog
+        open={isNameDialogOpen}
+        onOpenChange={setIsNameDialogOpen}
+        onSetUserName={handleSetUserName}
       />
     </div>
   );

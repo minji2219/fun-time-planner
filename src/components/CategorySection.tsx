@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Vote, Heart, Users, ExternalLink } from "lucide-react";
+import { Vote, Heart, Users, ExternalLink, Trash } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface CategorySectionProps {
@@ -21,11 +21,12 @@ interface CategorySectionProps {
     url?: string;
   }>;
   onVote: (itemId: number) => void;
+  onDelete?: (itemId: number) => void;
   currentUser: string;
   isExpired: boolean;
 }
 
-const CategorySection = ({ category, items, onVote, currentUser, isExpired }: CategorySectionProps) => {
+const CategorySection = ({ category, items, onVote, onDelete, currentUser, isExpired }: CategorySectionProps) => {
   const maxVotes = Math.max(...items.map(item => item.votes), 1);
 
   if (items.length === 0) {
@@ -84,6 +85,16 @@ const CategorySection = ({ category, items, onVote, currentUser, isExpired }: Ca
                     </div>
                     
                     <div className="flex items-center space-x-2 ml-4">
+                      {onDelete && !isExpired && (
+                        <Button
+                          onClick={() => onDelete(item.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      )}
                       <div className="text-right">
                         <div className="text-2xl font-bold text-purple-600">{item.votes}</div>
                         <div className="text-xs text-gray-600">표</div>
