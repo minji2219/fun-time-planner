@@ -1,4 +1,4 @@
-[트립메이트](https://zp1v56uxy8rdx5ypatb0ockcb9tr6a-oci3--8080--6e337437.local-credentialless.webcontainer-api.io/)
+[트립메이트](https://chimerical-cat-262332.netlify.app/)
 
 ## 페르소나
 
