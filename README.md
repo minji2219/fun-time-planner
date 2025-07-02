@@ -1,4 +1,4 @@
-[트립메이트](https://fun-time-planner.lovable.app/)
+[트립메이트](https://zp1v56uxy8rdx5ypatb0ockcb9tr6a-oci3--8080--6e337437.local-credentialless.webcontainer-api.io/)
 
 ## 페르소나
 
