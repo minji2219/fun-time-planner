@@ -2,8 +2,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Vote, Heart, Users, ExternalLink, Trash } from "lucide-react";
+import { Vote, Heart, Users, ExternalLink, Trash, MessageCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import CommentDialog from "./CommentDialog";
+import { useState, useEffect } from "react";
 
 interface CategorySectionProps {
   category: {
@@ -24,10 +26,45 @@ interface CategorySectionProps {
   onDelete?: (itemId: number) => void;
   currentUser: string;
   isExpired: boolean;
+  tripId: string | number;
+  totalParticipants: number;
 }
 
-const CategorySection = ({ category, items, onVote, onDelete, currentUser, isExpired }: CategorySectionProps) => {
+const CategorySection = ({ 
+  category, 
+  items, 
+  onVote, 
+  onDelete, 
+  currentUser, 
+  isExpired, 
+  tripId, 
+  totalParticipants 
+}: CategorySectionProps) => {
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<{ id: number; name: string } | null>(null);
+  const [commentCounts, setCommentCounts] = useState<{ [key: number]: number }>({});
+
   const maxVotes = Math.max(...items.map(item => item.votes), 1);
+
+  // 각 제안의 댓글 수를 로드
+  useEffect(() => {
+    const counts: { [key: number]: number } = {};
+    items.forEach(item => {
+      const storageKey = `comments_${tripId}_${item.id}`;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        counts[item.id] = JSON.parse(stored).length;
+      } else {
+        counts[item.id] = 0;
+      }
+    });
+    setCommentCounts(counts);
+  }, [items, tripId]);
+
+  const handleCommentClick = (item: { id: number; name: string }) => {
+    setSelectedSuggestion(item);
+    setCommentDialogOpen(true);
+  };
 
   if (items.length === 0) {
     return (
@@ -45,20 +82,13 @@ const CategorySection = ({ category, items, onVote, onDelete, currentUser, isExp
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <category.icon className="h-6 w-6" />
-          <h3 className="text-xl font-bold">{category.name}</h3>
-          <Badge className={category.color}>{items.length}개 제안</Badge>
-        </div>
-      </div>
 
       <div className="grid gap-4">
         {items
           .sort((a, b) => b.votes - a.votes)
           .map((item, index) => {
             const hasVoted = item.voters.includes(currentUser);
-            const votePercentage = (item.votes / maxVotes) * 100;
+            const votePercentage = totalParticipants > 0 ? (item.votes / totalParticipants) * 100 : 0;
 
             return (
               <Card key={item.id} className={`bg-white/60 backdrop-blur-sm border-white/20 hover:bg-white/80 transition-all ${index === 0 && item.votes > 0 ? 'ring-2 ring-yellow-400' : ''}`}>
@@ -108,25 +138,39 @@ const CategorySection = ({ category, items, onVote, onDelete, currentUser, isExp
                     {/* 투표 진행바 */}
                     <div className="space-y-1">
                       <Progress value={votePercentage} className="h-2" />
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>전체 투표 중 {Math.round(votePercentage)}%</span>
-                        <span>{item.votes}/{maxVotes}</span>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>참여자 투표율 {Math.round(votePercentage)}%</span>
+                        <span>{item.votes}/{totalParticipants}</span>
                       </div>
                     </div>
 
-                    {/* 투표자 목록 */}
-                    {item.voters.length > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4 text-gray-500" />
-                        <div className="flex flex-wrap gap-1">
-                          {item.voters.map((voter, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {voter}
-                            </Badge>
-                          ))}
+                    {/* 투표자 목록과 댓글 버튼 */}
+                    <div className="flex items-center justify-between">
+                      {item.voters.length > 0 ? (
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex flex-wrap gap-1">
+                            {item.voters.map((voter, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {voter}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div></div>
+                      )}
+                      
+                      <Button
+                        onClick={() => handleCommentClick({ id: item.id, name: item.name })}
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        {commentCounts[item.id] || 0}
+                      </Button>
+                    </div>
 
                     {/* 투표 버튼 */}
                     <Button

@@ -38,33 +38,23 @@ const TripCard = ({ trip }: TripCardProps) => {
           </div>
           <Badge 
             variant={trip.status === "active" ? "default" : "secondary"}
-            className={trip.status === "active" ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
+            className={trip.status === "active" ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-600"}
           >
-            {trip.status === "active" ? "진행중" : "완료"}
+            {trip.status === "active" ? "진행중" : "마감됨"}
           </Badge>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <div className="flex items-center text-sm text-gray-600">
+          <div className="flex items-center text-sm text-muted-foreground">
             <Calendar className="h-4 w-4 mr-2" />
             <span>마감: {format(deadlineDate, "PPP", { locale: ko })}</span>
-            {isExpired && (
-              <Badge variant="destructive" className="ml-2 text-xs">
-                마감됨
-              </Badge>
-            )}
           </div>
           
-          <div className="flex items-center text-sm text-gray-600">
+          <div className="flex items-center text-sm text-muted-foreground">
             <Users className="h-4 w-4 mr-2" />
             <span>참여자 {trip.participantCount}명</span>
-          </div>
-          
-          <div className="flex items-center text-sm text-gray-600">
-            <Vote className="h-4 w-4 mr-2" />
-            <span>투표 항목 {trip.categoryCount}개</span>
           </div>
         </div>
         

@@ -1,9 +1,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Calendar, Vote } from "lucide-react";
+import { Plus, Users, Calendar, Vote, History } from "lucide-react";
 import TripCard from "@/components/TripCard";
 import CreateTripDialog from "@/components/CreateTripDialog";
+import JoinTripDialog from "@/components/JoinTripDialog";
+import { useNavigate } from "react-router-dom";
 
 // 로컬스토리지에서 여행 계획들을 가져오는 함수
 const getStoredTrips = () => {
@@ -31,6 +33,8 @@ const defaultTrips = [
 
 const Index = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const navigate = useNavigate();
   
   // 저장된 여행 계획들과 기본 예시 데이터를 합쳐서 표시
   const storedTrips = getStoredTrips();
@@ -45,10 +49,22 @@ const Index = () => {
   }));
   
   const allTrips = [...defaultTrips, ...storedTripsArray];
+  const activeTrips = allTrips.filter(trip => trip.status === "active");
 
   const handleCreateTrip = (tripData: any) => {
+    // 여행 코드 생성 (간단한 구현)
+    const generateTripCode = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    };
+
     const newTrip = {
       id: Date.now(),
+      code: generateTripCode(),
       ...tripData,
       location: tripData.location, // 지역 정보 추가
       categories: {
@@ -80,16 +96,27 @@ const Index = () => {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 여행 투표
               </h1>
-              <p className="text-gray-600 mt-1">친구들과 함께 완벽한 여행 계획을 세워보세요</p>
+              <p className="text-muted-foreground mt-1">친구들과 함께 완벽한 여행 계획을 세워보세요</p>
             </div>
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
-              size="lg"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              새 여행 계획
-            </Button>
+            <div className="flex space-x-3">
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
+                size="lg"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                새 여행 계획
+              </Button>
+              <Button 
+                onClick={() => setIsJoinDialogOpen(true)}
+                variant="outline"
+                className="bg-gradient-to-r from-green-100 to-emerald-100 hover:from-green-200 hover:to-emerald-200 border-green-300"
+                size="lg"
+              >
+                <Users className="h-5 w-5 mr-2" />
+                여행 참여하기
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -97,55 +124,51 @@ const Index = () => {
       {/* 메인 컨텐츠 */}
       <main className="container mx-auto px-4 py-8">
         {/* 통계 카드들 */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <div className="flex items-center space-x-3">
               <div className="p-3 bg-blue-100 rounded-full">
                 <Calendar className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">진행 중인 계획</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {allTrips.filter(trip => trip.status === "active").length}
+                <p className="text-sm text-muted-foreground">진행 중인 계획</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {activeTrips.length}
                 </p>
               </div>
             </div>
           </div>
           
           <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-green-100 rounded-full">
-                <Users className="h-6 w-6 text-green-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-gray-100 rounded-full">
+                  <History className="h-6 w-6 text-gray-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">완료된 계획</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {allTrips.filter(trip => trip.status === "completed").length}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">총 참여자</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {allTrips.reduce((sum, trip) => sum + trip.participantCount, 0)}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Vote className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">총 투표 항목</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {allTrips.reduce((sum, trip) => sum + trip.categoryCount, 0)}
-                </p>
-              </div>
+              <Button 
+                onClick={() => navigate("/past-trips")}
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+              >
+                보기
+              </Button>
             </div>
           </div>
         </div>
 
         {/* 여행 계획 목록 */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">나의 여행 계획들</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-6">진행 중인 여행 계획</h2>
           
-          {allTrips.length === 0 ? (
+          {activeTrips.length === 0 ? (
             <div className="text-center py-12">
               <div className="bg-white/60 backdrop-blur-sm rounded-lg p-8 border border-white/20">
                 <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -162,7 +185,7 @@ const Index = () => {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allTrips.map((trip) => (
+              {activeTrips.map((trip) => (
                 <TripCard key={trip.id} trip={trip} />
               ))}
             </div>
@@ -174,6 +197,11 @@ const Index = () => {
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onCreateTrip={handleCreateTrip}
+      />
+
+      <JoinTripDialog
+        open={isJoinDialogOpen}
+        onOpenChange={setIsJoinDialogOpen}
       />
     </div>
   );

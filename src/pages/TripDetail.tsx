@@ -10,6 +10,7 @@ import { ko } from "date-fns/locale";
 import CategorySection from "@/components/CategorySection";
 import AddSuggestionDialog from "@/components/AddSuggestionDialog";
 import UserNameDialog from "@/components/UserNameDialog";
+import TripMap from "@/components/TripMap";
 import { getAIRecommendation } from "@/utils/aiRecommendations";
 
 // 임시 데이터 - 실제로는 localStorage나 백엔드에서 가져올 데이터
@@ -298,10 +299,17 @@ const TripDetail = () => {
                 onDelete={(itemId) => handleDeleteSuggestion(category.id, itemId)}
                 currentUser={currentUser}
                 isExpired={isExpired}
+                tripId={tripData.id}
+                totalParticipants={tripData.participantCount || tripData.participants.length}
               />
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* 지도 섹션 */}
+        <div className="mt-8">
+          <TripMap tripId={tripData.id} />
+        </div>
       </main>
 
       <AddSuggestionDialog
