@@ -1,203 +1,229 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Plus, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { MapPin, Utensils, Hotel, Sparkles, Vote } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-interface MapLocation {
+interface Suggestion {
   id: number;
   name: string;
-  lat: number;
-  lng: number;
+  description: string;
   category: string;
+  votes: number;
+  voters: string[];
 }
 
 interface TripMapProps {
   tripId: string | number;
-  locations?: MapLocation[];
-  onLocationsChange?: (locations: MapLocation[]) => void;
+  suggestions: Suggestion[];
+  location?: string;
 }
 
-// 한국 주요 도시의 좌표 데이터
-const cityCoordinates: { [key: string]: { lat: number; lng: number } } = {
-  "서울": { lat: 37.5665, lng: 126.9780 },
-  "부산": { lat: 35.1796, lng: 129.0756 },
-  "대구": { lat: 35.8714, lng: 128.6014 },
-  "인천": { lat: 37.4563, lng: 126.7052 },
-  "광주": { lat: 35.1595, lng: 126.8526 },
-  "대전": { lat: 36.3504, lng: 127.3845 },
-  "울산": { lat: 35.5384, lng: 129.3114 },
-  "제주": { lat: 33.4996, lng: 126.5312 },
-  "제주도": { lat: 33.4996, lng: 126.5312 },
-  "강릉": { lat: 37.7519, lng: 128.8761 },
-  "경주": { lat: 35.8562, lng: 129.2247 },
-  "여수": { lat: 34.7604, lng: 127.6622 },
-  "포항": { lat: 36.0190, lng: 129.3435 },
-  "춘천": { lat: 37.8813, lng: 127.7298 }
+// 카테고리별 아이콘과 색상 매핑
+const categoryConfig = {
+  restaurant: { icon: Utensils, color: "bg-orange-500", bgColor: "bg-orange-100", textColor: "text-orange-800" },
+  accommodation: { icon: Hotel, color: "bg-blue-500", bgColor: "bg-blue-100", textColor: "text-blue-800" },
+  attraction: { icon: MapPin, color: "bg-green-500", bgColor: "bg-green-100", textColor: "text-green-800" },
+  activity: { icon: Sparkles, color: "bg-purple-500", bgColor: "bg-purple-100", textColor: "text-purple-800" },
 };
 
-const TripMap = ({ tripId, locations = [], onLocationsChange }: TripMapProps) => {
-  const [savedLocations, setSavedLocations] = useState<MapLocation[]>(locations);
-  const [newLocationName, setNewLocationName] = useState("");
-  const [mapCenter, setMapCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // 서울 기본
+const TripMap = ({ tripId, suggestions, location }: TripMapProps) => {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  useEffect(() => {
-    // 로컬 스토리지에서 저장된 위치 로드
-    const storageKey = `map_locations_${tripId}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const parsedLocations = JSON.parse(stored);
-      setSavedLocations(parsedLocations);
-      
-      // 저장된 위치가 있으면 첫 번째 위치로 지도 중심 설정
-      if (parsedLocations.length > 0) {
-        setMapCenter({ lat: parsedLocations[0].lat, lng: parsedLocations[0].lng });
-      }
+  // 카테고리별로 제안들을 그룹화
+  const groupedSuggestions = suggestions.reduce((acc, suggestion) => {
+    if (!acc[suggestion.category]) {
+      acc[suggestion.category] = [];
     }
-  }, [tripId]);
+    acc[suggestion.category].push(suggestion);
+    return acc;
+  }, {} as { [key: string]: Suggestion[] });
 
-  const addLocation = () => {
-    if (!newLocationName.trim()) return;
-    
-    const locationName = newLocationName.trim();
-    
-    // 도시 좌표에서 검색
-    const coordinates = cityCoordinates[locationName] || 
-                      Object.entries(cityCoordinates).find(([city]) => 
-                        city.includes(locationName) || locationName.includes(city)
-                      )?.[1];
-    
-    if (!coordinates) {
-      alert("해당 지역의 좌표를 찾을 수 없습니다. 지원되는 지역: " + Object.keys(cityCoordinates).join(", "));
-      return;
-    }
-    
-    const newLocation: MapLocation = {
-      id: Date.now(),
-      name: locationName,
-      lat: coordinates.lat,
-      lng: coordinates.lng,
-      category: "여행지"
-    };
-    
-    const updatedLocations = [...savedLocations, newLocation];
-    setSavedLocations(updatedLocations);
-    
-    // 로컬 스토리지에 저장
-    const storageKey = `map_locations_${tripId}`;
-    localStorage.setItem(storageKey, JSON.stringify(updatedLocations));
-    
-    // 새 위치로 지도 중심 이동
-    setMapCenter({ lat: coordinates.lat, lng: coordinates.lng });
-    
-    onLocationsChange?.(updatedLocations);
-    setNewLocationName("");
-  };
+  // 투표 순으로 정렬된 제안들
+  const sortedSuggestions = suggestions
+    .sort((a, b) => b.votes - a.votes)
+    .slice(0, 10); // 상위 10개만 표시
 
-  const removeLocation = (locationId: number) => {
-    const updatedLocations = savedLocations.filter(loc => loc.id !== locationId);
-    setSavedLocations(updatedLocations);
-    
-    // 로컬 스토리지에 저장
-    const storageKey = `map_locations_${tripId}`;
-    localStorage.setItem(storageKey, JSON.stringify(updatedLocations));
-    
-    onLocationsChange?.(updatedLocations);
-  };
+  const filteredSuggestions = selectedCategory 
+    ? suggestions.filter(s => s.category === selectedCategory)
+    : sortedSuggestions;
 
   return (
     <Card className="bg-white/60 backdrop-blur-sm border-white/20">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <MapPin className="h-5 w-5" />
-          <span>여행 지도</span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center space-x-2">
+            <MapPin className="h-5 w-5" />
+            <span>여행 지도</span>
+          </CardTitle>
+          <div className="text-sm text-muted-foreground">
+            {location && `📍 ${location}`}
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* 위치 추가 */}
-        <div className="flex space-x-2">
-          <Input
-            placeholder="방문할 지역 입력 (예: 제주도, 부산, 서울)"
-            value={newLocationName}
-            onChange={(e) => setNewLocationName(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addLocation()}
-          />
-          <Button onClick={addLocation} size="sm">
-            <Plus className="h-4 w-4" />
+      <CardContent className="space-y-6">
+        {/* 카테고리 필터 */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => setSelectedCategory(null)}
+            variant={selectedCategory === null ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+          >
+            전체 ({suggestions.length})
           </Button>
+          {Object.entries(groupedSuggestions).map(([category, items]) => {
+            const config = categoryConfig[category as keyof typeof categoryConfig];
+            if (!config) return null;
+            
+            return (
+              <Button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                className="text-xs"
+              >
+                <config.icon className="h-3 w-3 mr-1" />
+                {getCategoryName(category)} ({items.length})
+              </Button>
+            );
+          })}
         </div>
 
-        {/* 지도 영역 (간단한 시각화) */}
-        <div className="relative bg-gradient-to-br from-blue-100 to-green-100 rounded-lg h-64 overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            {savedLocations.length === 0 ? (
-              <div className="text-center text-muted-foreground">
-                <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>여행할 지역을 추가해보세요</p>
+        {/* 지도 영역 */}
+        <div className="relative bg-gradient-to-br from-blue-100 to-green-100 rounded-lg h-80 overflow-hidden">
+          <div className="absolute inset-0">
+            {/* 지도 배경 패턴 */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="grid grid-cols-12 grid-rows-8 h-full">
+                {Array.from({ length: 96 }).map((_, i) => (
+                  <div key={i} className="border border-blue-200" />
+                ))}
               </div>
-            ) : (
-              <div className="relative w-full h-full">
-                {/* 지도 배경 패턴 */}
-                <div className="absolute inset-0 opacity-20">
-                  <div className="grid grid-cols-8 grid-rows-6 h-full">
-                    {Array.from({ length: 48 }).map((_, i) => (
-                      <div key={i} className="border border-blue-200" />
-                    ))}
+            </div>
+            
+            {/* 제안 마커들 */}
+            {filteredSuggestions.map((suggestion, index) => {
+              const config = categoryConfig[suggestion.category as keyof typeof categoryConfig];
+              if (!config) return null;
+
+              // 마커 위치를 랜덤하게 배치 (실제로는 좌표 데이터를 사용)
+              const left = 15 + (index * 7) % 70;
+              const top = 20 + (index * 11) % 60;
+
+              return (
+                <div
+                  key={suggestion.id}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                  style={{
+                    left: `${left}%`,
+                    top: `${top}%`
+                  }}
+                >
+                  {/* 마커 */}
+                  <div className={`relative ${config.color} rounded-full p-2 shadow-lg hover:scale-110 transition-transform`}>
+                    <config.icon className="h-4 w-4 text-white" />
+                    {suggestion.votes > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {suggestion.votes}
+                      </div>
+                    )}
                   </div>
-                </div>
-                
-                {/* 위치 마커들 */}
-                {savedLocations.map((location, index) => (
-                  <div
-                    key={location.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                    style={{
-                      left: `${20 + (index * 15) % 60}%`,
-                      top: `${30 + (index * 20) % 40}%`
-                    }}
-                  >
-                    <div className="relative">
-                      <MapPin className="h-8 w-8 text-red-500 drop-shadow-lg" fill="currentColor" />
-                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded px-2 py-1 text-xs font-medium shadow-lg whitespace-nowrap">
-                        {location.name}
+                  
+                  {/* 툴팁 */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div className="bg-white rounded-lg shadow-lg p-3 min-w-48 border">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <config.icon className="h-4 w-4" />
+                        <span className="font-semibold text-sm">{suggestion.name}</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">{suggestion.description}</p>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className={`text-xs ${config.textColor} ${config.bgColor}`}>
+                          {getCategoryName(suggestion.category)}
+                        </Badge>
+                        <div className="flex items-center space-x-1 text-xs text-gray-500">
+                          <Vote className="h-3 w-3" />
+                          <span>{suggestion.votes}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* 저장된 위치 목록 */}
-        {savedLocations.length > 0 && (
+        {/* 범례 */}
+        <div className="bg-white/80 rounded-lg p-4">
+          <h4 className="font-medium text-sm mb-3">범례</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(categoryConfig).map(([category, config]) => (
+              <div key={category} className="flex items-center space-x-2">
+                <div className={`${config.color} rounded-full p-1`}>
+                  <config.icon className="h-3 w-3 text-white" />
+                </div>
+                <span className="text-xs">{getCategoryName(category)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 제안 목록 */}
+        {filteredSuggestions.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-medium text-sm">저장된 위치</h4>
-            <div className="flex flex-wrap gap-2">
-              {savedLocations.map((location) => (
-                <Badge key={location.id} variant="secondary" className="flex items-center space-x-1">
-                  <span>{location.name}</span>
-                  <Button
-                    onClick={() => removeLocation(location.id)}
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-0 ml-1 hover:bg-transparent"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
+            <h4 className="font-medium text-sm">
+              {selectedCategory ? `${getCategoryName(selectedCategory)} 제안` : "인기 제안"} 
+              ({filteredSuggestions.length}개)
+            </h4>
+            <div className="grid gap-2 max-h-40 overflow-y-auto">
+              {filteredSuggestions.map((suggestion) => {
+                const config = categoryConfig[suggestion.category as keyof typeof categoryConfig];
+                if (!config) return null;
+
+                return (
+                  <div key={suggestion.id} className="flex items-center justify-between bg-white/50 rounded-lg p-2">
+                    <div className="flex items-center space-x-2">
+                      <config.icon className="h-4 w-4 text-gray-600" />
+                      <div>
+                        <p className="text-sm font-medium">{suggestion.name}</p>
+                        <p className="text-xs text-gray-500">{suggestion.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary" className={`text-xs ${config.textColor} ${config.bgColor}`}>
+                        {getCategoryName(suggestion.category)}
+                      </Badge>
+                      <div className="flex items-center space-x-1 text-xs text-gray-500">
+                        <Vote className="h-3 w-3" />
+                        <span>{suggestion.votes}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
         
         <div className="text-xs text-muted-foreground">
-          <p>지원 지역: 서울, 부산, 대구, 인천, 광주, 대전, 울산, 제주도, 강릉, 경주, 여수, 포항, 춘천</p>
+          <p>💡 마커를 클릭하면 상세 정보를 확인할 수 있습니다. 숫자는 투표 수를 나타냅니다.</p>
         </div>
       </CardContent>
     </Card>
   );
+};
+
+const getCategoryName = (category: string): string => {
+  const categoryNames: { [key: string]: string } = {
+    restaurant: "식당",
+    accommodation: "숙소",
+    attraction: "관광지",
+    activity: "액티비티"
+  };
+  return categoryNames[category] || category;
 };
 
 export default TripMap;
