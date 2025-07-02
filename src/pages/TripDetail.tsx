@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils, Sparkles } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils, Sparkles, Copy, Check, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import CategorySection from "@/components/CategorySection";
@@ -12,6 +12,7 @@ import AddSuggestionDialog from "@/components/AddSuggestionDialog";
 import UserNameDialog from "@/components/UserNameDialog";
 import TripMap from "@/components/TripMap";
 import { getAIRecommendation } from "@/utils/aiRecommendations";
+import { toast } from "@/components/ui/sonner";
 
 // 임시 데이터 - 실제로는 localStorage나 백엔드에서 가져올 데이터
 const getStoredTrips = () => {
@@ -29,7 +30,11 @@ const defaultMockData = {
     id: 1,
     title: "제주도 여행",
     description: "3박 4일 제주도 여행 계획",
-    deadline: "2024-07-15",
+    deadline: "2024-01-15",
+    startDate: "2024-01-20",
+    endDate: "2024-01-23",
+    location: "제주도",
+    code: "JEJU2024",
     participantCount: 4,
     participants: ["김철수", "이영희", "박민수", "정지은"],
     categories: {
@@ -67,6 +72,7 @@ const TripDetail = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // 저장된 데이터와 기본 데이터 병합
   const storedTrips = getStoredTrips();
@@ -93,6 +99,17 @@ const TripDetail = () => {
 
   const handleBack = () => {
     navigate("/");
+  };
+
+  const copyTripCode = async () => {
+    try {
+      await navigator.clipboard.writeText(tripData.code);
+      setCopied(true);
+      toast.success("여행 코드가 복사되었습니다!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("복사에 실패했습니다.");
+    }
   };
 
   const handleVote = (categoryId: string, itemId: number) => {
@@ -211,14 +228,34 @@ const TripDetail = () => {
                 )}
               </div>
             </div>
-            <Button 
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-              disabled={isExpired}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              제안 추가
-            </Button>
+            <div className="flex items-center space-x-3">
+              {/* 여행 코드 표시 */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                <div className="flex items-center space-x-2">
+                  <div>
+                    <p className="text-xs text-gray-500">여행 코드</p>
+                    <p className="font-mono font-bold text-sm">{tripData.code}</p>
+                  </div>
+                  <Button
+                    onClick={copyTripCode}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                disabled={isExpired}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                제안 추가
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -228,12 +265,26 @@ const TripDetail = () => {
         {/* 여행 정보 카드 */}
         <Card className="bg-white/60 backdrop-blur-sm border-white/20 mb-8">
           <CardContent className="p-6">
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-4 gap-6">
               <div className="flex items-center space-x-3">
                 <Calendar className="h-8 w-8 text-blue-500" />
                 <div>
+                  <p className="text-sm text-gray-600">여행 일정</p>
+                  {tripData.startDate && tripData.endDate ? (
+                    <p className="font-semibold">
+                      {format(new Date(tripData.startDate), "MM/dd", { locale: ko })} - {format(new Date(tripData.endDate), "MM/dd", { locale: ko })}
+                    </p>
+                  ) : (
+                    <p className="font-semibold text-gray-400">미정</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Calendar className="h-8 w-8 text-red-500" />
+                <div>
                   <p className="text-sm text-gray-600">투표 마감일</p>
-                  <p className="font-semibold">{format(deadlineDate, "PPP", { locale: ko })}</p>
+                  <p className="font-semibold">{format(deadlineDate, "MM/dd", { locale: ko })}</p>
                   {isExpired && (
                     <Badge variant="destructive" className="mt-1">마감됨</Badge>
                   )}
@@ -308,7 +359,11 @@ const TripDetail = () => {
 
         {/* 지도 섹션 */}
         <div className="mt-8">
-          <TripMap tripId={tripData.id} />
+          <TripMap 
+            tripId={tripData.id} 
+            suggestions={Object.values(tripData.categories).flat()}
+            location={tripData.location}
+          />
         </div>
       </main>
 

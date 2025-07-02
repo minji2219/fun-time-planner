@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +60,14 @@ const CategorySection = ({
     setCommentCounts(counts);
   }, [items, tripId]);
 
+  // 댓글 수 업데이트 함수
+  const updateCommentCount = (suggestionId: number) => {
+    const storageKey = `comments_${tripId}_${suggestionId}`;
+    const stored = localStorage.getItem(storageKey);
+    const count = stored ? JSON.parse(stored).length : 0;
+    setCommentCounts(prev => ({ ...prev, [suggestionId]: count }));
+  };
+
   const handleCommentClick = (item: { id: number; name: string }) => {
     setSelectedSuggestion(item);
     setCommentDialogOpen(true);
@@ -82,7 +89,6 @@ const CategorySection = ({
 
   return (
     <div className="space-y-4">
-
       <div className="grid gap-4">
         {items
           .sort((a, b) => b.votes - a.votes)
@@ -200,6 +206,18 @@ const CategorySection = ({
             );
           })}
       </div>
+
+      {selectedSuggestion && (
+        <CommentDialog
+          open={commentDialogOpen}
+          onOpenChange={setCommentDialogOpen}
+          suggestionId={selectedSuggestion.id}
+          suggestionName={selectedSuggestion.name}
+          tripId={tripId}
+          currentUser={currentUser}
+          onCommentAdded={() => updateCommentCount(selectedSuggestion.id)}
+        />
+      )}
     </div>
   );
 };

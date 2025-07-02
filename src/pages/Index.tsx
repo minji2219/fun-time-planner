@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Calendar, Vote, History } from "lucide-react";
+import { Plus, Users, Calendar, Vote, History, Plane } from "lucide-react";
 import TripCard from "@/components/TripCard";
 import CreateTripDialog from "@/components/CreateTripDialog";
 import JoinTripDialog from "@/components/JoinTripDialog";
@@ -18,16 +17,16 @@ const saveTrips = (trips: any) => {
   localStorage.setItem('tripPlans', JSON.stringify(trips));
 };
 
-// 기본 예시 데이터
+// 기본 예시 데이터 (마감된 계획으로 수정)
 const defaultTrips = [
   {
     id: 1,
     title: "제주도 여행",
     description: "3박 4일 제주도 여행 계획",
-    deadline: "2024-07-15",
+    deadline: "2024-01-15", // 과거 날짜로 변경
     participantCount: 4,
     categoryCount: 8,
-    status: "active"
+    status: "completed"
   }
 ];
 
@@ -66,7 +65,7 @@ const Index = () => {
       id: Date.now(),
       code: generateTripCode(),
       ...tripData,
-      location: tripData.location, // 지역 정보 추가
+      location: tripData.location,
       categories: {
         restaurant: [],
         accommodation: [],
@@ -86,17 +85,33 @@ const Index = () => {
     window.location.reload();
   };
 
+  const handleDeleteTrip = (tripId: number) => {
+    const storedTrips = getStoredTrips();
+    delete storedTrips[tripId];
+    saveTrips(storedTrips);
+    
+    // 페이지 새로고침으로 변경사항 반영
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* 헤더 */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-white/20">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                여행 투표
-              </h1>
-              <p className="text-muted-foreground mt-1">친구들과 함께 완벽한 여행 계획을 세워보세요</p>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg">
+                  <Plane className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    트립메이트
+                  </h1>
+                  <p className="text-muted-foreground text-sm">친구들과 함께 완벽한 여행 계획을 세워보세요</p>
+                </div>
+              </div>
             </div>
             <div className="flex space-x-3">
               <Button 
@@ -186,7 +201,12 @@ const Index = () => {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {activeTrips.map((trip) => (
-                <TripCard key={trip.id} trip={trip} />
+                <TripCard 
+                  key={trip.id} 
+                  trip={trip} 
+                  onDelete={handleDeleteTrip}
+                  showDeleteButton={true}
+                />
               ))}
             </div>
           )}

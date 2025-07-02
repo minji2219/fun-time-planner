@@ -30,6 +30,7 @@ interface CommentDialogProps {
   suggestionName: string;
   tripId: string | number;
   currentUser: string;
+  onCommentAdded?: () => void;
 }
 
 const CommentDialog = ({ 
@@ -38,7 +39,8 @@ const CommentDialog = ({
   suggestionId, 
   suggestionName, 
   tripId, 
-  currentUser 
+  currentUser,
+  onCommentAdded
 }: CommentDialogProps) => {
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
@@ -73,6 +75,11 @@ const CommentDialog = ({
     localStorage.setItem(storageKey, JSON.stringify(updatedComments));
     
     setNewComment("");
+    
+    // 부모 컴포넌트에 댓글 추가 알림
+    if (onCommentAdded) {
+      onCommentAdded();
+    }
   };
 
   return (

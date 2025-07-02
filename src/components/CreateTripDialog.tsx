@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,10 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, X } from "lucide-react";
+import { CalendarIcon, Plus, X, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/sonner";
 
 interface CreateTripDialogProps {
   open: boolean;
@@ -29,29 +29,44 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState<Date>();
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
   const [location, setLocation] = useState("");
   const [participants, setParticipants] = useState<string[]>([]);
   const [newParticipant, setNewParticipant] = useState("");
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [tripCode, setTripCode] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const generateTripCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !deadline || !location) return;
 
-    onCreateTrip({
+    const code = generateTripCode();
+    setTripCode(code);
+
+    const tripData = {
       title,
       description,
       deadline: deadline.toISOString().split('T')[0],
+      startDate: startDate?.toISOString().split('T')[0],
+      endDate: endDate?.toISOString().split('T')[0],
       location,
       participants: participants.length > 0 ? participants : ["나"],
-    });
+      code
+    };
 
-    // 폼 리셋
-    setTitle("");
-    setDescription("");
-    setDeadline(undefined);
-    setLocation("");
-    setParticipants([]);
-    setNewParticipant("");
+    onCreateTrip(tripData);
+    setShowSuccessDialog(true);
   };
 
   const addParticipant = () => {
@@ -64,6 +79,81 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
   const removeParticipant = (participant: string) => {
     setParticipants(participants.filter(p => p !== participant));
   };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(tripCode);
+      setCopied(true);
+      toast.success("여행 코드가 복사되었습니다!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("복사에 실패했습니다.");
+    }
+  };
+
+  const handleClose = () => {
+    // 폼 리셋
+    setTitle("");
+    setDescription("");
+    setDeadline(undefined);
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setLocation("");
+    setParticipants([]);
+    setNewParticipant("");
+    setShowSuccessDialog(false);
+    setTripCode("");
+    setCopied(false);
+    onOpenChange(false);
+  };
+
+  if (showSuccessDialog) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-green-600">여행 계획이 생성되었습니다! 🎉</DialogTitle>
+            <DialogDescription className="text-center">
+              친구들에게 아래 코드를 공유해서 여행 계획에 참여하도록 초대하세요.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-2">여행 참여 코드</p>
+              <div className="flex items-center justify-center space-x-2">
+                <div className="bg-gray-100 px-4 py-2 rounded-lg font-mono text-lg font-bold">
+                  {tripCode}
+                </div>
+                <Button
+                  onClick={copyToClipboard}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-1"
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span>{copied ? "복사됨" : "복사"}</span>
+                </Button>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">
+                💡 <strong>팁:</strong> 이 코드를 친구들에게 공유하면 여행 계획에 참여할 수 있습니다. 
+                여행 상세 페이지에서도 언제든지 코드를 확인할 수 있어요!
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={handleClose} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,6 +197,54 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>여행 시작일</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "MM/dd", { locale: ko }) : "시작일"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>여행 종료일</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "MM/dd", { locale: ko }) : "종료일"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div className="space-y-2">

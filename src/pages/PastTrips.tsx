@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plane } from "lucide-react";
 import TripCard from "@/components/TripCard";
 import { useNavigate } from "react-router-dom";
 
@@ -10,13 +10,13 @@ const getStoredTrips = () => {
   return stored ? JSON.parse(stored) : {};
 };
 
-// 기본 예시 데이터
+// 기본 예시 데이터 (마감된 계획)
 const defaultTrips = [
   {
     id: 1,
     title: "제주도 여행",
     description: "3박 4일 제주도 여행 계획",
-    deadline: "2024-01-15", // 과거 날짜로 설정
+    deadline: "2024-01-15", // 과거 날짜
     participantCount: 4,
     categoryCount: 8,
     status: "completed"
@@ -56,11 +56,16 @@ const PastTrips = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 돌아가기
               </Button>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  지난 여행 계획
-                </h1>
-                <p className="text-muted-foreground mt-1">완료된 여행 계획들을 확인해보세요</p>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg">
+                  <Plane className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    트립메이트
+                  </h1>
+                  <p className="text-muted-foreground text-sm">완료된 여행 계획들을 확인해보세요</p>
+                </div>
               </div>
             </div>
           </div>
