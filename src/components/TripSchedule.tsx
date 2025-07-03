@@ -8,6 +8,7 @@ import { ko } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TripScheduleProps {
   tripData: any;
@@ -32,6 +33,10 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
   const [schedule, setSchedule] = useState<DaySchedule[]>(tripData.schedule || []);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ScheduleItem>>({});
+  const [activeDay, setActiveDay] = useState<string>("");
+
+  // 참여자 수 계산 (participantCount가 있으면 사용, 없으면 participants 배열 길이 사용)
+  const totalParticipants = tripData.participantCount || tripData.participants?.length || 0;
 
   // 카테고리별 투표 결과 계산
   const getTopSuggestions = () => {
@@ -172,6 +177,9 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
     }
 
     setSchedule(newSchedule);
+    if (newSchedule.length > 0) {
+      setActiveDay(newSchedule[0].date);
+    }
   };
 
   const categoryColors = {
@@ -232,6 +240,22 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
     );
   }
 
+  // 날짜별 탭 생성
+  const startDate = parseISO(tripData.startDate);
+  const endDate = parseISO(tripData.endDate);
+  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const dates = [];
+  
+  for (let i = 0; i <= daysDiff; i++) {
+    const currentDate = addDays(startDate, i);
+    dates.push(format(currentDate, "yyyy-MM-dd"));
+  }
+
+  // 첫 번째 날짜를 기본 활성 탭으로 설정
+  if (!activeDay && dates.length > 0) {
+    setActiveDay(dates[0]);
+  }
+
   return (
     <div className="grid lg:grid-cols-4 gap-6">
       {/* 스케줄 메인 영역 */}
@@ -270,87 +294,107 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-6">
-                {/* 가로 형태의 날짜 헤더 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {schedule.map((day) => (
-                    <div key={day.date} className="bg-white/50 rounded-lg p-4 border border-white/30">
-                      <h3 className="font-semibold text-center mb-4 text-lg border-b pb-2">
-                        {format(parseISO(day.date), "M/d (eee)", { locale: ko })}
-                      </h3>
-                      
-                      <div className="space-y-3">
-                        {day.items.length === 0 ? (
-                          <p className="text-center text-muted-foreground text-sm">일정이 없습니다</p>
-                        ) : (
-                          day.items.map((item) => (
-                            <div key={item.id} className="bg-white/70 rounded-lg p-3 border">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center space-x-2">
-                                  <Clock className="h-3 w-3 text-muted-foreground" />
-                                  {editingItem === item.id ? (
-                                    <Input
-                                      value={editForm.time || ""}
-                                      onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
-                                      className="w-16 h-6 text-xs"
-                                    />
-                                  ) : (
-                                    <span className="text-xs font-medium">{item.time}</span>
-                                  )}
-                                </div>
-                                <Button
-                                  onClick={() => startEdit(item)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Edit3 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              
-                              {editingItem === item.id ? (
-                                <div className="space-y-2">
-                                  <Input
-                                    value={editForm.title || ""}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                                    className="h-6 text-xs"
-                                  />
-                                  <Textarea
-                                    value={editForm.description || ""}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                                    rows={2}
-                                    className="text-xs"
-                                  />
-                                  <div className="flex space-x-1">
-                                    <Button onClick={saveEdit} size="sm" variant="outline" className="h-6 text-xs">
-                                      <Save className="h-3 w-3 mr-1" />
-                                      저장
-                                    </Button>
-                                    <Button onClick={cancelEdit} size="sm" variant="ghost" className="h-6 text-xs">
-                                      <X className="h-3 w-3 mr-1" />
-                                      취소
-                                    </Button>
+              <Tabs value={activeDay} onValueChange={setActiveDay}>
+                {/* 가로 형태의 날짜 탭 */}
+                <TabsList className="grid w-full bg-white/60 backdrop-blur-sm mb-6" style={{ gridTemplateColumns: `repeat(${dates.length}, 1fr)` }}>
+                  {dates.map((date) => (
+                    <TabsTrigger key={date} value={date} className="text-sm">
+                      {format(parseISO(date), "M/d (eee)", { locale: ko })}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                {/* 각 날짜별 스케줄 내용 */}
+                {dates.map((date) => {
+                  const daySchedule = schedule.find(day => day.date === date);
+                  
+                  return (
+                    <TabsContent key={date} value={date}>
+                      <div className="bg-white/50 rounded-lg p-6 border border-white/30">
+                        <h3 className="font-semibold text-lg mb-4 text-center border-b pb-2">
+                          {format(parseISO(date), "M월 d일 (eee)", { locale: ko })} 일정
+                        </h3>
+                        
+                        <div className="space-y-4">
+                          {!daySchedule || daySchedule.items.length === 0 ? (
+                            <p className="text-center text-muted-foreground py-8">이 날의 일정이 없습니다</p>
+                          ) : (
+                            daySchedule.items.map((item) => (
+                              <div key={item.id} className="bg-white/70 rounded-lg p-4 border">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center space-x-3">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    {editingItem === item.id ? (
+                                      <Input
+                                        value={editForm.time || ""}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                                        className="w-20 h-8 text-sm"
+                                      />
+                                    ) : (
+                                      <span className="text-sm font-medium">{item.time}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    {editingItem === item.id ? (
+                                      <>
+                                        <Button onClick={saveEdit} size="sm" variant="outline" className="h-8 text-xs">
+                                          <Save className="h-3 w-3 mr-1" />
+                                          저장
+                                        </Button>
+                                        <Button onClick={cancelEdit} size="sm" variant="ghost" className="h-8 text-xs">
+                                          <X className="h-3 w-3 mr-1" />
+                                          취소
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        onClick={() => startEdit(item)}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Edit3 className="h-3 w-3" />
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
-                              ) : (
-                                <>
-                                  <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                                  <p className="text-xs text-muted-foreground mb-2">{item.description}</p>
-                                  <Badge 
-                                    className={`text-xs ${categoryColors[item.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
-                                  >
-                                    {categoryNames[item.category as keyof typeof categoryNames] || item.category}
-                                  </Badge>
-                                </>
-                              )}
-                            </div>
-                          ))
-                        )}
+                                
+                                {editingItem === item.id ? (
+                                  <div className="space-y-3">
+                                    <Input
+                                      value={editForm.title || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                                      className="text-sm"
+                                      placeholder="일정 제목"
+                                    />
+                                    <Textarea
+                                      value={editForm.description || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                                      rows={2}
+                                      className="text-sm"
+                                      placeholder="일정 설명"
+                                    />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <h4 className="font-medium text-lg mb-2">{item.title}</h4>
+                                    <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
+                                    <Badge 
+                                      className={`text-xs ${categoryColors[item.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
+                                    >
+                                      {categoryNames[item.category as keyof typeof categoryNames] || item.category}
+                                    </Badge>
+                                  </>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    </TabsContent>
+                  );
+                })}
+              </Tabs>
             )}
           </CardContent>
         </Card>
@@ -383,8 +427,8 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
                 ) : (
                   <div className="space-y-2">
                     {items.map((item, index) => {
-                      const votePercentage = tripData.participants.length > 0 
-                        ? (item.votes / tripData.participants.length) * 100 
+                      const votePercentage = totalParticipants > 0 
+                        ? (item.votes / totalParticipants) * 100 
                         : 0;
                       
                       return (
@@ -406,7 +450,7 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
                             <span>참여율 {Math.round(votePercentage)}%</span>
                             <div className="flex items-center space-x-1">
                               <Users className="h-3 w-3" />
-                              <span>{item.voters.length}/{tripData.participants.length}</span>
+                              <span>{item.voters.length}/{totalParticipants}</span>
                             </div>
                           </div>
                         </div>

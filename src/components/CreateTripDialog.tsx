@@ -86,6 +86,7 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
       endDate: endDate?.toISOString().split('T')[0],
       location,
       participants: participants.length > 0 ? participants : ["나"],
+      participantCount: participants.length > 0 ? participants.length : 1, // 참여자 수 명시적으로 저장
       code
     };
 

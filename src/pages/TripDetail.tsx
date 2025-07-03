@@ -90,6 +90,9 @@ const TripDetail = () => {
   const deadlineDate = new Date(tripData.deadline);
   const isExpired = deadlineDate < new Date();
 
+  // 참여자 수 계산 (participantCount가 있으면 사용, 없으면 participants 배열 길이 사용)
+  const totalParticipants = tripData.participantCount || tripData.participants?.length || 0;
+
   // 사용자 이름 확인
   useEffect(() => {
     const storedUserName = localStorage.getItem('currentUserName');
@@ -367,8 +370,8 @@ const TripDetail = () => {
                 <Users className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-sm text-gray-600">참여자</p>
-                  <p className="font-semibold">{tripData.participantCount || tripData.participants.length}명</p>
-                  <p className="text-xs text-gray-500">{tripData.participants.slice(0, 3).join(", ")}{tripData.participants.length > 3 ? '...' : ''}</p>
+                  <p className="font-semibold">{totalParticipants}명</p>
+                  <p className="text-xs text-gray-500">{tripData.participants?.slice(0, 3).join(", ")}{tripData.participants?.length > 3 ? '...' : ''}</p>
                 </div>
               </div>
               
@@ -441,7 +444,7 @@ const TripDetail = () => {
                     currentUser={currentUser}
                     isExpired={isExpired}
                     tripId={tripData.id}
-                    totalParticipants={tripData.participantCount || tripData.participants.length}
+                    totalParticipants={totalParticipants}
                   />
                 </TabsContent>
               ))}
