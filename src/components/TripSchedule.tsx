@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, Sparkles, Edit3, Save, X, Vote, Users, Trophy } from "lucide-react";
 import { format, addDays, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -271,45 +270,50 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
                 </Button>
               </div>
             ) : (
-              <Tabs defaultValue={schedule[0]?.date} className="w-full">
-                <TabsList className="grid w-full grid-cols-auto bg-white/60 backdrop-blur-sm">
+              <div className="space-y-6">
+                {/* 가로 형태의 날짜 헤더 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {schedule.map((day) => (
-                    <TabsTrigger key={day.date} value={day.date} className="text-xs">
-                      {format(parseISO(day.date), "M/d (eee)", { locale: ko })}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-
-                {schedule.map((day) => (
-                  <TabsContent key={day.date} value={day.date} className="mt-6">
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg">
-                        {format(parseISO(day.date), "yyyy년 M월 d일 (eeee)", { locale: ko })}
+                    <div key={day.date} className="bg-white/50 rounded-lg p-4 border border-white/30">
+                      <h3 className="font-semibold text-center mb-4 text-lg border-b pb-2">
+                        {format(parseISO(day.date), "M/d (eee)", { locale: ko })}
                       </h3>
                       
                       <div className="space-y-3">
-                        {day.items.map((item) => (
-                          <div key={item.id} className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
-                            <div className="flex items-center space-x-2 min-w-16">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              {editingItem === item.id ? (
-                                <Input
-                                  value={editForm.time || ""}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
-                                  className="w-20 h-8 text-xs"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium">{item.time}</span>
-                              )}
-                            </div>
-                            
-                            <div className="flex-1">
+                        {day.items.length === 0 ? (
+                          <p className="text-center text-muted-foreground text-sm">일정이 없습니다</p>
+                        ) : (
+                          day.items.map((item) => (
+                            <div key={item.id} className="bg-white/70 rounded-lg p-3 border">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <Clock className="h-3 w-3 text-muted-foreground" />
+                                  {editingItem === item.id ? (
+                                    <Input
+                                      value={editForm.time || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                                      className="w-16 h-6 text-xs"
+                                    />
+                                  ) : (
+                                    <span className="text-xs font-medium">{item.time}</span>
+                                  )}
+                                </div>
+                                <Button
+                                  onClick={() => startEdit(item)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Edit3 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              
                               {editingItem === item.id ? (
                                 <div className="space-y-2">
                                   <Input
                                     value={editForm.title || ""}
                                     onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                                    className="h-8"
+                                    className="h-6 text-xs"
                                   />
                                   <Textarea
                                     value={editForm.description || ""}
@@ -317,12 +321,12 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
                                     rows={2}
                                     className="text-xs"
                                   />
-                                  <div className="flex space-x-2">
-                                    <Button onClick={saveEdit} size="sm" variant="outline" className="h-7">
+                                  <div className="flex space-x-1">
+                                    <Button onClick={saveEdit} size="sm" variant="outline" className="h-6 text-xs">
                                       <Save className="h-3 w-3 mr-1" />
                                       저장
                                     </Button>
-                                    <Button onClick={cancelEdit} size="sm" variant="ghost" className="h-7">
+                                    <Button onClick={cancelEdit} size="sm" variant="ghost" className="h-6 text-xs">
                                       <X className="h-3 w-3 mr-1" />
                                       취소
                                     </Button>
@@ -330,34 +334,23 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
                                 </div>
                               ) : (
                                 <>
-                                  <div className="flex items-center justify-between">
-                                    <h4 className="font-medium">{item.title}</h4>
-                                    <Button
-                                      onClick={() => startEdit(item)}
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-7 p-0"
-                                    >
-                                      <Edit3 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                                  <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+                                  <p className="text-xs text-muted-foreground mb-2">{item.description}</p>
+                                  <Badge 
+                                    className={`text-xs ${categoryColors[item.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
+                                  >
+                                    {categoryNames[item.category as keyof typeof categoryNames] || item.category}
+                                  </Badge>
                                 </>
                               )}
                             </div>
-                            
-                            <Badge 
-                              className={`text-xs ${categoryColors[item.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
-                            >
-                              {categoryNames[item.category as keyof typeof categoryNames] || item.category}
-                            </Badge>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </div>
-                  </TabsContent>
-                ))}
-              </Tabs>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
