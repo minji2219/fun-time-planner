@@ -13,11 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, X, Copy, Check } from "lucide-react";
+import { CalendarIcon, Plus, X, Copy, Check, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CreateTripDialogProps {
   open: boolean;
@@ -37,6 +38,7 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [tripCode, setTripCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
 
   const generateTripCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -47,9 +49,31 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
     return code;
   };
 
+  const validateDates = () => {
+    const newErrors: string[] = [];
+
+    // 여행 시작일과 종료일 검증
+    if (startDate && endDate && startDate > endDate) {
+      newErrors.push("여행 종료일은 시작일보다 늦어야 합니다.");
+    }
+
+    // 투표 마감일과 여행 시작일 검증
+    if (deadline && startDate && deadline >= startDate) {
+      newErrors.push("투표 마감일은 여행 시작일보다 전이어야 합니다.");
+    }
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !deadline || !location) return;
+
+    // 날짜 검증
+    if (!validateDates()) {
+      return;
+    }
 
     const code = generateTripCode();
     setTripCode(code);
@@ -62,6 +86,7 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
       endDate: endDate?.toISOString().split('T')[0],
       location,
       participants: participants.length > 0 ? participants : ["나"],
+      participantCount: participants.length > 0 ? participants.length : 1, // 참여자 수 명시적으로 저장
       code
     };
 
@@ -104,7 +129,20 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
     setShowSuccessDialog(false);
     setTripCode("");
     setCopied(false);
+    setErrors([]);
     onOpenChange(false);
+  };
+
+  // 날짜 변경 시 검증
+  const handleDateChange = (type: 'deadline' | 'startDate' | 'endDate', date: Date | undefined) => {
+    if (type === 'deadline') setDeadline(date);
+    if (type === 'startDate') setStartDate(date);
+    if (type === 'endDate') setEndDate(date);
+    
+    // 잠시 후 검증 실행 (상태 업데이트 후)
+    setTimeout(() => {
+      validateDates();
+    }, 0);
   };
 
   if (showSuccessDialog) {
@@ -166,6 +204,20 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 오류 메시지 표시 */}
+          {errors.length > 0 && (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                <ul className="list-disc list-inside space-y-1">
+                  {errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="title">여행 제목 *</Label>
             <Input
@@ -206,7 +258,9 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-start text-left font-normal"
+                    className={`w-full justify-start text-left font-normal ${
+                      startDate && endDate && startDate > endDate ? 'border-red-500' : ''
+                    }`}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {startDate ? format(startDate, "MM/dd", { locale: ko }) : "시작일"}
@@ -216,7 +270,7 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
                   <Calendar
                     mode="single"
                     selected={startDate}
-                    onSelect={setStartDate}
+                    onSelect={(date) => handleDateChange('startDate', date)}
                     initialFocus
                   />
                 </PopoverContent>
@@ -229,7 +283,9 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-start text-left font-normal"
+                    className={`w-full justify-start text-left font-normal ${
+                      startDate && endDate && startDate > endDate ? 'border-red-500' : ''
+                    }`}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {endDate ? format(endDate, "MM/dd", { locale: ko }) : "종료일"}
@@ -239,7 +295,7 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={setEndDate}
+                    onSelect={(date) => handleDateChange('endDate', date)}
                     initialFocus
                   />
                 </PopoverContent>
@@ -253,7 +309,9 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal"
+                  className={`w-full justify-start text-left font-normal ${
+                    deadline && startDate && deadline >= startDate ? 'border-red-500' : ''
+                  }`}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {deadline ? format(deadline, "PPP", { locale: ko }) : "날짜를 선택하세요"}
@@ -263,7 +321,7 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
                 <Calendar
                   mode="single"
                   selected={deadline}
-                  onSelect={setDeadline}
+                  onSelect={(date) => handleDateChange('deadline', date)}
                   initialFocus
                 />
               </PopoverContent>
@@ -310,7 +368,7 @@ const CreateTripDialog = ({ open, onOpenChange, onCreateTrip }: CreateTripDialog
             <Button 
               type="submit" 
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-              disabled={!title || !deadline || !location}
+              disabled={!title || !deadline || !location || errors.length > 0}
             >
               여행 계획 만들기
             </Button>

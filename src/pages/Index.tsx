@@ -50,7 +50,7 @@ const Index = () => {
   const allTrips = [...defaultTrips, ...storedTripsArray];
   const activeTrips = allTrips.filter(trip => trip.status === "active");
 
-  const handleCreateTrip = (tripData: any) => {
+  const handleCreateTrip = async (tripData: any) => {
     // 여행 코드 생성 (간단한 구현)
     const generateTripCode = () => {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -66,6 +66,7 @@ const Index = () => {
       code: generateTripCode(),
       ...tripData,
       location: tripData.location,
+      participants: [],
       categories: {
         restaurant: [],
         accommodation: [],
@@ -80,6 +81,16 @@ const Index = () => {
     saveTrips(storedTrips);
     
     setIsCreateDialogOpen(false);
+    
+    // 링크 복사
+    const tripLink = `${window.location.origin}/trip/${newTrip.id}`;
+    try {
+      await navigator.clipboard.writeText(tripLink);
+      // 토스트 메시지 대신 alert 사용 (토스트 컴포넌트가 현재 페이지에서 사용되지 않음)
+      alert("새 여행 계획이 생성되었습니다! 링크가 복사되었습니다.");
+    } catch (err) {
+      alert("새 여행 계획이 생성되었습니다!");
+    }
     
     // 페이지 새로고침으로 새 데이터 반영
     window.location.reload();

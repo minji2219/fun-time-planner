@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils, Sparkles, Copy, Check, Share2 } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils, Sparkles, Copy, Check, Share2, Settings, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import CategorySection from "@/components/CategorySection";
 import AddSuggestionDialog from "@/components/AddSuggestionDialog";
 import UserNameDialog from "@/components/UserNameDialog";
 import TripMap from "@/components/TripMap";
+import EditTripDialog from "@/components/EditTripDialog";
+import TripSchedule from "@/components/TripSchedule";
 import { getAIRecommendation } from "@/utils/aiRecommendations";
 import { toast } from "@/components/ui/sonner";
 
@@ -66,21 +68,30 @@ const categoryConfig = [
 ];
 
 const TripDetail = () => {
-  const { id } = useParams();
+  const { id, code } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("restaurant");
+  const [activeTab, setActiveTab] = useState("voting");
+  const [votingTab, setVotingTab] = useState("restaurant");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // 저장된 데이터와 기본 데이터 병합
   const storedTrips = getStoredTrips();
   const allTrips = { ...defaultMockData, ...storedTrips };
-  const [tripData, setTripData] = useState(allTrips[id] || allTrips[1]);
+  
+  // 코드로 접근한 경우 해당 여행 찾기
+  const tripByCode = code ? Object.values(allTrips).find((trip: any) => trip.code === code) : null;
+  const [tripData, setTripData] = useState(tripByCode || allTrips[id] || allTrips[1]);
 
   const deadlineDate = new Date(tripData.deadline);
   const isExpired = deadlineDate < new Date();
+
+  // 참여자 수 계산 (participantCount가 있으면 사용, 없으면 participants 배열 길이 사용)
+  const totalParticipants = tripData.participantCount || tripData.participants?.length || 0;
 
   // 사용자 이름 확인
   useEffect(() => {
@@ -107,6 +118,18 @@ const TripDetail = () => {
       setCopied(true);
       toast.success("여행 코드가 복사되었습니다!");
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("복사에 실패했습니다.");
+    }
+  };
+
+  const copyTripLink = async () => {
+    try {
+      const link = `${window.location.origin}/trip/${tripData.id}`;
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      toast.success("여행 링크가 복사되었습니다!");
+      setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
       toast.error("복사에 실패했습니다.");
     }
@@ -206,6 +229,35 @@ const TripDetail = () => {
     });
   };
 
+  const handleEditTrip = (updatedData: any) => {
+    setTripData(updatedData);
+    
+    // 로컬 스토리지에 저장
+    const storedTrips = getStoredTrips();
+    storedTrips[updatedData.id] = updatedData;
+    saveTrips(storedTrips);
+    
+    toast.success("여행 계획이 수정되었습니다!");
+  };
+
+  const handleSaveSchedule = (schedule: any) => {
+    const updatedData = { ...tripData, schedule };
+    setTripData(updatedData);
+    
+    // 로컬 스토리지에 저장
+    const storedTrips = getStoredTrips();
+    storedTrips[updatedData.id] = updatedData;
+    saveTrips(storedTrips);
+    
+    toast.success("스케줄이 저장되었습니다!");
+  };
+
+  const handleAddSuggestionAtLocation = (lat: number, lng: number) => {
+    // 위치 정보와 함께 제안 추가 다이얼로그 열기
+    setIsAddDialogOpen(true);
+    toast.info("지도를 클릭한 위치에 제안을 추가해보세요!");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* 헤더 */}
@@ -246,6 +298,29 @@ const TripDetail = () => {
                   </Button>
                 </div>
               </div>
+
+              {/* 링크 공유 버튼 */}
+              <Button
+                onClick={copyTripLink}
+                variant="outline"
+                size="sm"
+                className="bg-white/60"
+              >
+                {linkCopied ? <Check className="h-4 w-4 mr-2 text-green-600" /> : <Share2 className="h-4 w-4 mr-2" />}
+                링크 공유
+              </Button>
+
+              {/* 설정 버튼 */}
+              <Button
+                onClick={() => setIsEditDialogOpen(true)}
+                variant="outline"
+                size="sm"
+                className="bg-white/60"
+                disabled={isExpired}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                설정
+              </Button>
               
               <Button 
                 onClick={() => setIsAddDialogOpen(true)}
@@ -295,8 +370,8 @@ const TripDetail = () => {
                 <Users className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-sm text-gray-600">참여자</p>
-                  <p className="font-semibold">{tripData.participantCount || tripData.participants.length}명</p>
-                  <p className="text-xs text-gray-500">{tripData.participants.slice(0, 3).join(", ")}{tripData.participants.length > 3 ? '...' : ''}</p>
+                  <p className="font-semibold">{totalParticipants}명</p>
+                  <p className="text-xs text-gray-500">{tripData.participants?.slice(0, 3).join(", ")}{tripData.participants?.length > 3 ? '...' : ''}</p>
                 </div>
               </div>
               
@@ -313,58 +388,87 @@ const TripDetail = () => {
           </CardContent>
         </Card>
 
-        {/* 카테고리별 탭 */}
+        {/* 메인 탭 */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 bg-white/60 backdrop-blur-sm">
-            {categoryConfig.map((category) => (
-              <TabsTrigger key={category.id} value={category.id} className="flex items-center space-x-2">
-                <category.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{category.name}</span>
-              </TabsTrigger>
-            ))}
+          <TabsList className="grid w-full grid-cols-3 bg-white/60 backdrop-blur-sm mb-6">
+            <TabsTrigger value="voting" className="flex items-center space-x-2">
+              <Vote className="h-4 w-4" />
+              <span>투표하기</span>
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="flex items-center space-x-2">
+              <CalendarDays className="h-4 w-4" />
+              <span>여행 스케줄</span>
+            </TabsTrigger>
+            <TabsTrigger value="map" className="flex items-center space-x-2">
+              <MapPin className="h-4 w-4" />
+              <span>지도</span>
+            </TabsTrigger>
           </TabsList>
 
-          {categoryConfig.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center space-x-2">
-                  <category.icon className="h-5 w-5" />
-                  <h3 className="text-lg font-semibold">{category.name}</h3>
-                </div>
-                <Button
-                  onClick={() => handleAIRecommendation(category.id)}
-                  variant="outline"
-                  size="sm"
-                  disabled={isExpired}
-                  className="bg-gradient-to-r from-yellow-100 to-orange-100 hover:from-yellow-200 hover:to-orange-200 border-yellow-300"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  AI 추천
-                </Button>
-              </div>
-              
-              <CategorySection
-                category={category}
-                items={tripData.categories[category.id] || []}
-                onVote={(itemId) => handleVote(category.id, itemId)}
-                onDelete={(itemId) => handleDeleteSuggestion(category.id, itemId)}
-                currentUser={currentUser}
-                isExpired={isExpired}
-                tripId={tripData.id}
-                totalParticipants={tripData.participantCount || tripData.participants.length}
-              />
-            </TabsContent>
-          ))}
-        </Tabs>
+          {/* 투표 탭 */}
+          <TabsContent value="voting">
+            <Tabs value={votingTab} onValueChange={setVotingTab}>
+              <TabsList className="grid w-full grid-cols-4 bg-white/60 backdrop-blur-sm">
+                {categoryConfig.map((category) => (
+                  <TabsTrigger key={category.id} value={category.id} className="flex items-center space-x-2">
+                    <category.icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{category.name}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-        {/* 지도 섹션 */}
-        <div className="mt-8">
-          <TripMap 
-            tripId={tripData.id} 
-            suggestions={Object.values(tripData.categories).flat()}
-            location={tripData.location}
-          />
-        </div>
+              {categoryConfig.map((category) => (
+                <TabsContent key={category.id} value={category.id} className="mt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center space-x-2">
+                      <category.icon className="h-5 w-5" />
+                      <h3 className="text-lg font-semibold">{category.name}</h3>
+                    </div>
+                    <Button
+                      onClick={() => handleAIRecommendation(category.id)}
+                      variant="outline"
+                      size="sm"
+                      disabled={isExpired}
+                      className="bg-gradient-to-r from-yellow-100 to-orange-100 hover:from-yellow-200 hover:to-orange-200 border-yellow-300"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      AI 추천
+                    </Button>
+                  </div>
+                  
+                  <CategorySection
+                    category={category}
+                    items={tripData.categories[category.id] || []}
+                    onVote={(itemId) => handleVote(category.id, itemId)}
+                    onDelete={(itemId) => handleDeleteSuggestion(category.id, itemId)}
+                    currentUser={currentUser}
+                    isExpired={isExpired}
+                    tripId={tripData.id}
+                    totalParticipants={totalParticipants}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
+
+          {/* 스케줄 탭 */}
+          <TabsContent value="schedule">
+            <TripSchedule
+              tripData={tripData}
+              onSaveSchedule={handleSaveSchedule}
+            />
+          </TabsContent>
+
+          {/* 지도 탭 */}
+          <TabsContent value="map">
+            <TripMap 
+              tripId={tripData.id} 
+              suggestions={Object.values(tripData.categories).flat() as any[]}
+              location={tripData.location}
+              onAddSuggestionAtLocation={handleAddSuggestionAtLocation}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
 
       <AddSuggestionDialog
@@ -372,6 +476,13 @@ const TripDetail = () => {
         onOpenChange={setIsAddDialogOpen}
         onAddSuggestion={handleAddSuggestion}
         categories={categoryConfig}
+      />
+
+      <EditTripDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        tripData={tripData}
+        onSave={handleEditTrip}
       />
 
       <UserNameDialog
