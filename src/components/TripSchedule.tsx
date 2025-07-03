@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Sparkles, Edit3, Save, X } from "lucide-react";
+import { Calendar, Clock, Sparkles, Edit3, Save, X, Vote, Users, Trophy } from "lucide-react";
 import { format, addDays, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 
 interface TripScheduleProps {
   tripData: any;
@@ -32,6 +33,23 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
   const [schedule, setSchedule] = useState<DaySchedule[]>(tripData.schedule || []);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ScheduleItem>>({});
+
+  // 카테고리별 투표 결과 계산
+  const getTopSuggestions = () => {
+    const topSuggestions: { [category: string]: any[] } = {};
+    
+    Object.entries(tripData.categories).forEach(([category, items]: [string, any[]]) => {
+      const sortedItems = items
+        .filter(item => item.votes > 0)
+        .sort((a, b) => b.votes - a.votes)
+        .slice(0, 3); // 상위 3개만
+      topSuggestions[category] = sortedItems;
+    });
+    
+    return topSuggestions;
+  };
+
+  const topSuggestions = getTopSuggestions();
 
   // AI 스케줄 생성
   const generateAISchedule = () => {
@@ -164,6 +182,13 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
     activity: "bg-purple-100 text-purple-800",
   };
 
+  const categoryNames = {
+    restaurant: "식당",
+    accommodation: "숙소", 
+    attraction: "관광지",
+    activity: "액티비티"
+  };
+
   const startEdit = (item: ScheduleItem) => {
     setEditingItem(item.id);
     setEditForm(item);
@@ -209,133 +234,199 @@ const TripSchedule = ({ tripData, onSaveSchedule }: TripScheduleProps) => {
   }
 
   return (
-    <Card className="bg-white/60 backdrop-blur-sm border-white/20">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
-            <span>여행 스케줄</span>
-          </CardTitle>
-          <div className="flex space-x-2">
-            <Button
-              onClick={generateAISchedule}
-              variant="outline"
-              size="sm"
-              className="bg-gradient-to-r from-yellow-100 to-orange-100 hover:from-yellow-200 hover:to-orange-200 border-yellow-300"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI 스케줄 생성
-            </Button>
-            <Button onClick={handleSave} size="sm">
-              <Save className="h-4 w-4 mr-2" />
-              저장
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {schedule.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">아직 스케줄이 없습니다.</p>
-            <Button onClick={generateAISchedule} className="bg-gradient-to-r from-purple-600 to-pink-600">
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI로 스케줄 생성하기
-            </Button>
-          </div>
-        ) : (
-          <Tabs defaultValue={schedule[0]?.date} className="w-full">
-            <TabsList className="grid w-full grid-cols-auto bg-white/60 backdrop-blur-sm">
-              {schedule.map((day) => (
-                <TabsTrigger key={day.date} value={day.date} className="text-xs">
-                  {format(parseISO(day.date), "M/d (eee)", { locale: ko })}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+    <div className="grid lg:grid-cols-4 gap-6">
+      {/* 스케줄 메인 영역 */}
+      <div className="lg:col-span-3">
+        <Card className="bg-white/60 backdrop-blur-sm border-white/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5" />
+                <span>여행 스케줄</span>
+              </CardTitle>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={generateAISchedule}
+                  variant="outline"
+                  size="sm"
+                  className="bg-gradient-to-r from-yellow-100 to-orange-100 hover:from-yellow-200 hover:to-orange-200 border-yellow-300"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI 스케줄 생성
+                </Button>
+                <Button onClick={handleSave} size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  저장
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {schedule.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">아직 스케줄이 없습니다.</p>
+                <Button onClick={generateAISchedule} className="bg-gradient-to-r from-purple-600 to-pink-600">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI로 스케줄 생성하기
+                </Button>
+              </div>
+            ) : (
+              <Tabs defaultValue={schedule[0]?.date} className="w-full">
+                <TabsList className="grid w-full grid-cols-auto bg-white/60 backdrop-blur-sm">
+                  {schedule.map((day) => (
+                    <TabsTrigger key={day.date} value={day.date} className="text-xs">
+                      {format(parseISO(day.date), "M/d (eee)", { locale: ko })}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
-            {schedule.map((day) => (
-              <TabsContent key={day.date} value={day.date} className="mt-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">
-                    {format(parseISO(day.date), "yyyy년 M월 d일 (eeee)", { locale: ko })}
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    {day.items.map((item) => (
-                      <div key={item.id} className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
-                        <div className="flex items-center space-x-2 min-w-16">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          {editingItem === item.id ? (
-                            <Input
-                              value={editForm.time || ""}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
-                              className="w-20 h-8 text-xs"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium">{item.time}</span>
-                          )}
-                        </div>
-                        
-                        <div className="flex-1">
-                          {editingItem === item.id ? (
-                            <div className="space-y-2">
-                              <Input
-                                value={editForm.title || ""}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                                className="h-8"
-                              />
-                              <Textarea
-                                value={editForm.description || ""}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                                rows={2}
-                                className="text-xs"
-                              />
-                              <div className="flex space-x-2">
-                                <Button onClick={saveEdit} size="sm" variant="outline" className="h-7">
-                                  <Save className="h-3 w-3 mr-1" />
-                                  저장
-                                </Button>
-                                <Button onClick={cancelEdit} size="sm" variant="ghost" className="h-7">
-                                  <X className="h-3 w-3 mr-1" />
-                                  취소
-                                </Button>
-                              </div>
+                {schedule.map((day) => (
+                  <TabsContent key={day.date} value={day.date} className="mt-6">
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg">
+                        {format(parseISO(day.date), "yyyy년 M월 d일 (eeee)", { locale: ko })}
+                      </h3>
+                      
+                      <div className="space-y-3">
+                        {day.items.map((item) => (
+                          <div key={item.id} className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
+                            <div className="flex items-center space-x-2 min-w-16">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              {editingItem === item.id ? (
+                                <Input
+                                  value={editForm.time || ""}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                                  className="w-20 h-8 text-xs"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{item.time}</span>
+                              )}
                             </div>
-                          ) : (
-                            <>
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-medium">{item.title}</h4>
-                                <Button
-                                  onClick={() => startEdit(item)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Edit3 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{item.description}</p>
-                            </>
-                          )}
-                        </div>
-                        
-                        <Badge 
-                          className={`text-xs ${categoryColors[item.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
-                        >
-                          {item.category === 'restaurant' ? '식당' :
-                           item.category === 'accommodation' ? '숙소' :
-                           item.category === 'attraction' ? '관광지' :
-                           item.category === 'activity' ? '액티비티' : item.category}
-                        </Badge>
+                            
+                            <div className="flex-1">
+                              {editingItem === item.id ? (
+                                <div className="space-y-2">
+                                  <Input
+                                    value={editForm.title || ""}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                                    className="h-8"
+                                  />
+                                  <Textarea
+                                    value={editForm.description || ""}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                                    rows={2}
+                                    className="text-xs"
+                                  />
+                                  <div className="flex space-x-2">
+                                    <Button onClick={saveEdit} size="sm" variant="outline" className="h-7">
+                                      <Save className="h-3 w-3 mr-1" />
+                                      저장
+                                    </Button>
+                                    <Button onClick={cancelEdit} size="sm" variant="ghost" className="h-7">
+                                      <X className="h-3 w-3 mr-1" />
+                                      취소
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-medium">{item.title}</h4>
+                                    <Button
+                                      onClick={() => startEdit(item)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0"
+                                    >
+                                      <Edit3 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                                </>
+                              )}
+                            </div>
+                            
+                            <Badge 
+                              className={`text-xs ${categoryColors[item.category as keyof typeof categoryColors] || 'bg-gray-100 text-gray-800'}`}
+                            >
+                              {categoryNames[item.category as keyof typeof categoryNames] || item.category}
+                            </Badge>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 투표 결과 사이드바 */}
+      <div className="lg:col-span-1">
+        <Card className="bg-white/60 backdrop-blur-sm border-white/20">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Trophy className="h-5 w-5" />
+              <span>투표 결과</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {Object.entries(topSuggestions).map(([category, items]) => (
+              <div key={category} className="space-y-3">
+                <h4 className="font-medium text-sm flex items-center space-x-2">
+                  <span className={`w-3 h-3 rounded-full ${
+                    category === 'restaurant' ? 'bg-orange-500' :
+                    category === 'accommodation' ? 'bg-blue-500' :
+                    category === 'attraction' ? 'bg-green-500' :
+                    'bg-purple-500'
+                  }`}></span>
+                  <span>{categoryNames[category as keyof typeof categoryNames]}</span>
+                </h4>
+                
+                {items.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">투표된 항목이 없습니다</p>
+                ) : (
+                  <div className="space-y-2">
+                    {items.map((item, index) => {
+                      const votePercentage = tripData.participants.length > 0 
+                        ? (item.votes / tripData.participants.length) * 100 
+                        : 0;
+                      
+                      return (
+                        <div key={item.id} className="bg-white/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center space-x-2">
+                              {index === 0 && <Badge className="bg-yellow-100 text-yellow-800 text-xs">1위</Badge>}
+                              <span className="text-sm font-medium">{item.name}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Vote className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-sm font-bold">{item.votes}</span>
+                            </div>
+                          </div>
+                          
+                          <Progress value={votePercentage} className="h-1 mb-2" />
+                          
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>참여율 {Math.round(votePercentage)}%</span>
+                            <div className="flex items-center space-x-1">
+                              <Users className="h-3 w-3" />
+                              <span>{item.voters.length}/{tripData.participants.length}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              </TabsContent>
+                )}
+              </div>
             ))}
-          </Tabs>
-        )}
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 
