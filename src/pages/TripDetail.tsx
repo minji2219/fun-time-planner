@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils, Sparkles, Copy, Check, Share2 } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Vote, MapPin, Hotel, Utensils, Sparkles, Copy, Check, Share2, Settings } from "lucide-react";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import CategorySection from "@/components/CategorySection";
 import AddSuggestionDialog from "@/components/AddSuggestionDialog";
 import UserNameDialog from "@/components/UserNameDialog";
 import TripMap from "@/components/TripMap";
+import EditTripDialog from "@/components/EditTripDialog";
+import TripSchedule from "@/components/TripSchedule";
 import { getAIRecommendation } from "@/utils/aiRecommendations";
 import { toast } from "@/components/ui/sonner";
 
@@ -66,18 +68,23 @@ const categoryConfig = [
 ];
 
 const TripDetail = () => {
-  const { id } = useParams();
+  const { id, code } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("restaurant");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // 저장된 데이터와 기본 데이터 병합
   const storedTrips = getStoredTrips();
   const allTrips = { ...defaultMockData, ...storedTrips };
-  const [tripData, setTripData] = useState(allTrips[id] || allTrips[1]);
+  
+  // 코드로 접근한 경우 해당 여행 찾기
+  const tripByCode = code ? Object.values(allTrips).find((trip: any) => trip.code === code) : null;
+  const [tripData, setTripData] = useState(tripByCode || allTrips[id] || allTrips[1]);
 
   const deadlineDate = new Date(tripData.deadline);
   const isExpired = deadlineDate < new Date();
@@ -107,6 +114,18 @@ const TripDetail = () => {
       setCopied(true);
       toast.success("여행 코드가 복사되었습니다!");
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("복사에 실패했습니다.");
+    }
+  };
+
+  const copyTripLink = async () => {
+    try {
+      const link = `${window.location.origin}/trip/${tripData.id}`;
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      toast.success("여행 링크가 복사되었습니다!");
+      setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
       toast.error("복사에 실패했습니다.");
     }
@@ -206,6 +225,35 @@ const TripDetail = () => {
     });
   };
 
+  const handleEditTrip = (updatedData: any) => {
+    setTripData(updatedData);
+    
+    // 로컬 스토리지에 저장
+    const storedTrips = getStoredTrips();
+    storedTrips[updatedData.id] = updatedData;
+    saveTrips(storedTrips);
+    
+    toast.success("여행 계획이 수정되었습니다!");
+  };
+
+  const handleSaveSchedule = (schedule: any) => {
+    const updatedData = { ...tripData, schedule };
+    setTripData(updatedData);
+    
+    // 로컬 스토리지에 저장
+    const storedTrips = getStoredTrips();
+    storedTrips[updatedData.id] = updatedData;
+    saveTrips(storedTrips);
+    
+    toast.success("스케줄이 저장되었습니다!");
+  };
+
+  const handleAddSuggestionAtLocation = (lat: number, lng: number) => {
+    // 위치 정보와 함께 제안 추가 다이얼로그 열기
+    setIsAddDialogOpen(true);
+    toast.info("지도를 클릭한 위치에 제안을 추가해보세요!");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* 헤더 */}
@@ -246,6 +294,29 @@ const TripDetail = () => {
                   </Button>
                 </div>
               </div>
+
+              {/* 링크 공유 버튼 */}
+              <Button
+                onClick={copyTripLink}
+                variant="outline"
+                size="sm"
+                className="bg-white/60"
+              >
+                {linkCopied ? <Check className="h-4 w-4 mr-2 text-green-600" /> : <Share2 className="h-4 w-4 mr-2" />}
+                링크 공유
+              </Button>
+
+              {/* 설정 버튼 */}
+              <Button
+                onClick={() => setIsEditDialogOpen(true)}
+                variant="outline"
+                size="sm"
+                className="bg-white/60"
+                disabled={isExpired}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                설정
+              </Button>
               
               <Button 
                 onClick={() => setIsAddDialogOpen(true)}
@@ -313,6 +384,14 @@ const TripDetail = () => {
           </CardContent>
         </Card>
 
+        {/* 스케줄 섹션 */}
+        <div className="mb-8">
+          <TripSchedule
+            tripData={tripData}
+            onSaveSchedule={handleSaveSchedule}
+          />
+        </div>
+
         {/* 카테고리별 탭 */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4 bg-white/60 backdrop-blur-sm">
@@ -361,8 +440,9 @@ const TripDetail = () => {
         <div className="mt-8">
           <TripMap 
             tripId={tripData.id} 
-            suggestions={Object.values(tripData.categories).flat()}
+            suggestions={Object.values(tripData.categories).flat() as any[]}
             location={tripData.location}
+            onAddSuggestionAtLocation={handleAddSuggestionAtLocation}
           />
         </div>
       </main>
@@ -372,6 +452,13 @@ const TripDetail = () => {
         onOpenChange={setIsAddDialogOpen}
         onAddSuggestion={handleAddSuggestion}
         categories={categoryConfig}
+      />
+
+      <EditTripDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        tripData={tripData}
+        onSave={handleEditTrip}
       />
 
       <UserNameDialog

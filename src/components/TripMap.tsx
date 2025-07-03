@@ -17,6 +17,7 @@ interface TripMapProps {
   tripId: string | number;
   suggestions: Suggestion[];
   location?: string;
+  onAddSuggestionAtLocation?: (lat: number, lng: number) => void;
 }
 
 // 카테고리별 아이콘과 색상 매핑
@@ -27,7 +28,7 @@ const categoryConfig = {
   activity: { icon: Sparkles, color: "bg-purple-500", bgColor: "bg-purple-100", textColor: "text-purple-800" },
 };
 
-const TripMap = ({ tripId, suggestions, location }: TripMapProps) => {
+const TripMap = ({ tripId, suggestions, location, onAddSuggestionAtLocation }: TripMapProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // 카테고리별로 제안들을 그룹화
@@ -92,7 +93,19 @@ const TripMap = ({ tripId, suggestions, location }: TripMapProps) => {
         </div>
 
         {/* 지도 영역 */}
-        <div className="relative bg-gradient-to-br from-blue-100 to-green-100 rounded-lg h-80 overflow-hidden">
+        <div 
+          className="relative bg-gradient-to-br from-blue-100 to-green-100 rounded-lg h-80 overflow-hidden cursor-crosshair"
+          onClick={(e) => {
+            if (onAddSuggestionAtLocation) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              const lat = 37.5 + (y / rect.height - 0.5) * 0.1; // 임시 좌표 변환
+              const lng = 127 + (x / rect.width - 0.5) * 0.1;
+              onAddSuggestionAtLocation(lat, lng);
+            }
+          }}
+        >
           <div className="absolute inset-0">
             {/* 지도 배경 패턴 */}
             <div className="absolute inset-0 opacity-20">

@@ -37,6 +37,7 @@ const AddSuggestionDialog = ({ open, onOpenChange, onAddSuggestion, categories }
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [url, setUrl] = useState("");
+  const [location, setLocation] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +48,7 @@ const AddSuggestionDialog = ({ open, onOpenChange, onAddSuggestion, categories }
       description,
       category,
       url: url.trim() || null,
+      location: location.trim() || null,
     });
 
     // 폼 리셋
@@ -54,6 +56,7 @@ const AddSuggestionDialog = ({ open, onOpenChange, onAddSuggestion, categories }
     setDescription("");
     setCategory("");
     setUrl("");
+    setLocation("");
   };
 
   return (
@@ -105,6 +108,16 @@ const AddSuggestionDialog = ({ open, onOpenChange, onAddSuggestion, categories }
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="location">위치 (선택)</Label>
+            <Input
+              id="location"
+              placeholder="예: 서울시 강남구, 제주시 연동"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
             />
           </div>
 
